@@ -242,7 +242,6 @@ func processPoints(r receipt) int64 {
         total_points += 6
     }
 
-
     // 10 points if the time of purchase is after 2:00pm and before 4:00pm
     parsedTime, _ := time.Parse("15:04", r.PurchaseTime)
     hour := parsedTime.Hour()
