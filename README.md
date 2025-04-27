@@ -31,6 +31,7 @@ In your terminal:
    Where [insert_path_to_json_file] could be a path to a .json file containing a receipt information or you could directly create the receipt json instead of doing @[insert_path_to_json_file]
    - Once you have performed a POST request, the response of the POST request should give you a `<unique ID>`. You can use that `<unique ID>` to get how much points you are
    awarded for a specific receipt through the `/receipts/{id}/points` endpoint. You can perform the curl request as follows:
+
    ```bash
    curl http://localhost:8080/receipts/<unique_id>/points
    ```
