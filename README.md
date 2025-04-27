@@ -27,8 +27,8 @@ In your terminal:
       --header "Content-Type: application/json" \
       --request "POST" \
       --data @[insert_path_to_json_file]
-   ```
-   Where [insert_path_to_json_file] could be a path to a .json file containing a receipt information or you could directly create the receipt json instead of doing @[insert_path_to_json_file]
+    ```
+Where [insert_path_to_json_file] could be a path to a .json file containing a receipt information or you could directly create the receipt json instead of doing @[insert_path_to_json_file]
    - Once you have performed a POST request, the response of the POST request should give you a `<unique ID>`. You can use that `<unique ID>` to get how much points you are
    awarded for a specific receipt through the `/receipts/{id}/points` endpoint. You can perform the curl request as follows:
 
@@ -84,7 +84,7 @@ An example of what a JSON file that a Receipt structure will take is as follows:
   - Points are awarded as specified in [Fetch Receipt Processor Challenge](https://github.com/fetch-rewards/receipt-processor-challenge/tree/main)
 
 ## References
-- https://go.dev/doc/tutorial/web-service-gin ~ How to write RESTful API in Go (since I never done this in Go before; mostly Distributed System stuff)
-- https://pkg.go.dev/time ~ Documentation on Time object in Go, which made it easier for me to parse
-- https://blog.stackademic.com/unique-identifier-id-and-uuid-in-go-lang-99e6cc1b73b5 ~ How to generate a unique ID for the receipts
+- [RESTful API in Go](https://go.dev/doc/tutorial/web-service-gin) ~ How to write RESTful API in Go (since I never done this in Go before; mostly Distributed System stuff)
+- [Time Documentation in Go](https://pkg.go.dev/time) ~ Documentation on Time object in Go, which made it easier for me to parse
+- [Unique ID Generation in Go](https://blog.stackademic.com/unique-identifier-id-and-uuid-in-go-lang-99e6cc1b73b5) ~ How to generate a unique ID for the receipts
 - Most other stuff like syntax, other packages used like (strconv, fmt, strings, unicode, etc.) I looked back on old code I've written in Go from past courses for reference
