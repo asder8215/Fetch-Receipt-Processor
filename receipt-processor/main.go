@@ -24,6 +24,10 @@ type item struct {
     Price            string `json:"price"`
 }
 
+type points struct {
+    Points int64 `json:"points"`
+}
+
 var receipts = []receipt{}
 
 
@@ -44,14 +48,18 @@ func getReceiptPointsByID(c *gin.Context) {
     
     for _, r := range receipts {
         if r.ID == id {
-            
-            c.IndentedJSON(http.StatusOK, a)
+            json_points = points { processPoints(r) }
+            c.IndentedJSON(http.StatusOK, json_points)
+            return
         }
     }
+
+    c.IndentedJSON(http.StatusNotFound, 
+    gin.H{"description": "No receipt found for that ID."})
 }
 
 func processPoints(r receipt) {
-    var total_points := 0
+    var total_points int64 := 0
     
     // One point for every alphanumeric character in the retailer name
     for _, c := range r.Retailer {
