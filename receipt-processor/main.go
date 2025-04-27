@@ -1,6 +1,7 @@
 package main
 
 import (
+    "fmt"
     "github.com/gin-gonic/gin"
     "github.com/google/uuid"
     "math"
@@ -31,7 +32,6 @@ type points struct {
 
 var receipts = []receipt{}
 
-
 func main() {
     router := gin.Default()
     router.GET("/receipts/:id/points", getReceiptPointsByID)
@@ -42,12 +42,13 @@ func main() {
 
 // Submits a receipt for processing.
 // @return: Returns the ID assigned to the receipt.
-func postReceipt() {
+func postReceipt(c *gin.Context) {
     var newReceipt receipt
 
     // Bind the received JSON to newReceipt
     if err := c.BindJSON(&newReceipt); err != nil {
-        c.IndentedJSON(http.BadRequest,
+        fmt.Print("Failed at Binding\n")
+        c.IndentedJSON(http.StatusBadRequest,
                        gin.H{"description": "The receipt is invalid."})
         return
     }
@@ -55,32 +56,36 @@ func postReceipt() {
     // Verifying if the value given to newReceipt is valid
     
     // cannot have a empty string for a retail place
-    trimmed_retailer = string.TrimSpace(newReceipt.Retailer)
+    trimmed_retailer := strings.TrimSpace(newReceipt.Retailer)
     if trimmed_retailer == "" {
-        c.IndentedJSON(http.BadRequest,
+        fmt.Print("Failed at Retailer\n")
+        c.IndentedJSON(http.StatusBadRequest,
                        gin.H{"description": "The receipt is invalid."})
         return
     }
 
     // https://pkg.go.dev/time in func Parse portion of the documentation
     // rely on time for validity of PurchaseDate and PurchaseTime
-    parsedDate, date_err := time.Parse("2006-01-02", newReceipt.PurchaseDate)
-    if date_err != nil { 
-        c.IndentedJSON(http.BadRequest,
+    _, date_err := time.Parse("2006-01-02", newReceipt.PurchaseDate)
+    if date_err != nil {
+        fmt.Print("Failed at Purchase Date\n")
+        c.IndentedJSON(http.StatusBadRequest,
                        gin.H{"description": "The receipt is invalid."})
         return
     }
 
-    parsedTime, time_err := time.Parse("15:04", newReceipt.PurchaseTime)
+    _, time_err := time.Parse("15:04", newReceipt.PurchaseTime)
     if time_err != nil { 
-        c.IndentedJSON(http.BadRequest,
+        fmt.Print("Failed at Purchase Time\n")
+        c.IndentedJSON(http.StatusBadRequest,
                        gin.H{"description": "The receipt is invalid."})
         return
     }
     
     // verifying if total is formatted correctly
     if !verifyCost(newReceipt.Total) {
-        c.IndentedJSON(http.BadRequest,
+        fmt.Println("Failed at Total\n")
+        c.IndentedJSON(http.StatusBadRequest,
                        gin.H{"description": "The receipt is invalid."})
         return 
     }
@@ -90,19 +95,21 @@ func postReceipt() {
     // need to double check
     float_total, _ := strconv.ParseFloat(newReceipt.Total, 64)
     
-    var float_prices float64 := 0.00
+    var float_prices float64 = 0.00
     
     // verifying for each item in the receipt
     for _, i := range newReceipt.Items { 
         trimmed_str := strings.TrimSpace(i.ShortDescription)
         if trimmed_str == "" {
-            c.IndentedJSON(http.BadRequest,
+            fmt.Println("Failed at Item Name\n")
+            c.IndentedJSON(http.StatusBadRequest,
                            gin.H{"description": "The receipt is invalid."})
             return
         }
 
         if !verifyCost(i.Price) {
-            c.IndentedJSON(http.BadRequest,
+            fmt.Println("Failed at Item Price\n")
+            c.IndentedJSON(http.StatusBadRequest,
                            gin.H{"description": "The receipt is invalid."})
             return 
         } else {
@@ -110,9 +117,17 @@ func postReceipt() {
             float_prices += float_price
         }
     }
+
+    // truncating values for total and prices to ensure
+    // 2 decimal places
+    float_total = math.Floor(float_total*100) / 100
+    float_prices = math.Floor(float_prices*100) / 100
     
-    if float_total != float_prices { 
-        c.IndentedJSON(http.BadRequest,
+    if float_total != float_prices {
+        fmt.Print("Failed at Total = Prices\n")
+        fmt.Print("Total is %f\n", float_total)
+        fmt.Print("Total is %f\n", float_prices)
+        c.IndentedJSON(http.StatusBadRequest,
                        gin.H{"description": "The receipt is invalid."})
         return
     }
@@ -124,7 +139,7 @@ func postReceipt() {
     receipts = append(receipts, newReceipt)
     
     // Returns the ID as the JSON response
-    c.IndentedJSON(http.StatusCreated, newReceipt.ID)
+    c.IndentedJSON(http.StatusOK, newReceipt.ID)
 }
 
 // The total and price of an object has to follow 
@@ -132,10 +147,10 @@ func postReceipt() {
 // where the 3rd to last character must be a "."
 // followed by two numeric value)
 func verifyCost(p string) bool { 
-    var check_digits := false
-    var digits_after := 0
+    var check_digits = false
+    var digits_after = 0
     for _, c := range p {
-        if c == "." {
+        if c == '.' {
             check_digits = true
         } else if unicode.IsDigit(c) {
             if check_digits {
@@ -160,7 +175,7 @@ func getReceiptPointsByID(c *gin.Context) {
     
     for _, r := range receipts {
         if r.ID == id {
-            json_points = points { processPoints(r) }
+            json_points := points { processPoints(r) }
             c.IndentedJSON(http.StatusOK, json_points)
             return
         }
@@ -170,8 +185,11 @@ func getReceiptPointsByID(c *gin.Context) {
                    gin.H{"description": "No receipt found for that ID."})
 }
 
-func processPoints(r receipt) {
-    var total_points int64 := 0
+// Takes in a receipt and awards it points accordingly from
+// what's mentioned here: 
+// https://github.com/fetch-rewards/receipt-processor-challenge/tree/main
+func processPoints(r receipt) int64 {
+    var total_points int64 = 0
     
     // One point for every alphanumeric character in the retailer name
     for _, c := range r.Retailer {
@@ -197,7 +215,7 @@ func processPoints(r receipt) {
     }
 
     // 5 points for every two items on the receipt 
-    total_points += (len(r.Items) / 2) * 5
+    total_points += int64((len(r.Items) / 2) * 5)
     
     // If the trimmed length of the item description is a multiple of 3, 
     // multiply the price by 0.2 and round up to the nearest integer. 
@@ -207,7 +225,7 @@ func processPoints(r receipt) {
         if len(trimmed_str) % 3 == 0 {
             float_price, _ := strconv.ParseFloat(i.Price, 64)
             ceiled_price := math.Ceil(float_price * 0.2)
-            total_price += int64(ceiled_price)
+            total_points += int64(ceiled_price)
         }
     }
 
@@ -227,9 +245,12 @@ func processPoints(r receipt) {
 
     // 10 points if the time of purchase is after 2:00pm and before 4:00pm
     parsedTime, _ := time.Parse("15:04", r.PurchaseTime)
-    hour := parsedDate.Hour()
+    hour := parsedTime.Hour()
+    min := parsedTime.Minute()
 
-    if hour > 2 && hour < 4 {
+    if hour > 14 && hour < 16 {
+        total_points += 10
+    } else if hour == 14 && min > 0 {
         total_points += 10
     }
 
